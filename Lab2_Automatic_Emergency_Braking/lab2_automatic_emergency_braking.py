@@ -11,7 +11,7 @@ class SafetyNode(Node):
 
     def __init__(self):
     
-        super().__init__('lab1_safety_node')
+        super().__init__('lab2_safety_node')
 
         #sub to odom and scan topics
         self.odom_subscriber = self.create_subscription(Odometry, '/ego_racecar/odom', self.odom_callback, 1000) 
@@ -20,31 +20,28 @@ class SafetyNode(Node):
         self.drive_publisher = self.create_publisher(AckermannDriveStamped, 'drive', 1000)
 
         self.get_logger().info("Safety Node has been started.")
-        self.speed = 0.0  # current velocity 
-
+        self.speed = 0.5  # current velocity 
+        
     def odom_callback(self, msg):
-        self.speed = msg.twist.twist.linear.x  #(Vx) 
+        self.get_speed = msg.twist.twist.linear.x  #(Vx) 
 
     def scan_callback(self, msg):
 
         self.distance = msg.ranges  # distance array
         self.length_array = len(msg.ranges)  # length of the distance array 
         
-
         array_angles = []  # to store angles corresponding to each distance measurement
         array_distance = []  # to store distance measurements
         
         self.angle_min = msg.angle_min  # min angle is the start angle 
         self.angle_max = msg.angle_max # max angle is the end angle
 
-        self.angle_increment = msg.angle_increment  # angle increment
-
-        
+        self.angle_increment = msg.angle_increment  # angle increment        
         
         for i in range(self.length_array):
             angle = self.angle_min + i * self.angle_increment # angle at index i
             distance = self.distance[i] # distance at that angle (r)
-            if angle < -np.pi/4 or angle > np.pi/4:  # consider only angles outside of -45 to 45 degrees
+            if angle < -np.pi/2 or angle > np.pi/2:  # consider only angles outside of -45 to 45 degrees
                 array_angles.append(angle)
                 array_distance.append(distance)
         
@@ -58,28 +55,21 @@ class SafetyNode(Node):
         min_distance = array_distance[min_idx]
         angle = array_angles[min_idx]
 
-
         r_dot = -self.speed * np.cos(angle)
-        ttc = min_distance / abs(r_dot)
+        ttc = min_distance / max(abs(r_dot),0.01)  # time to collision (stopped the division by zero)
 
-        stop = False
-
-        # --- Speed decision logic ---
-        if ttc < 6.0:
-            stop = true
-            self.get_logger().warn(f"⚠️ Braking! TTC={ttc:.2f}s < 6.0s threshold")
+        if ttc >= 3.0:
+            drive_speed = self.speed
+            self.get_logger().info(f"✅ Safe | TTC={ttc:.2f}s | Speed={drive_speed:.2f} m/s")
         else:
-            v = 2.0  # desired speed
-        # --- Publish drive command ---
-        if stop == true:
-            v = 0.0
-            
+            drive_speed = 0.0
+            self.get_logger().warn(f"⚠️ Braking! TTC={ttc:.2f}s < 3.0s | Stopping the car.")
+
+        # --- Publish ---
         drive_msg = AckermannDriveStamped()
-        drive_msg.drive.speed = v
+        drive_msg.drive.speed = drive_speed
         drive_msg.drive.steering_angle = 0.0
         self.drive_publisher.publish(drive_msg)
-
-                
             
 def main(args=None):
     rclpy.init(args=args)
