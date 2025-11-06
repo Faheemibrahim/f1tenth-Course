@@ -8,6 +8,28 @@
 
 ---
 
+## ROS Interface
+
+### Parameters
+- `min_range` (float, meters): minimum valid Lidar range to consider for TTC.
+- `max_range` (float, meters): maximum valid Lidar range to consider for TTC.
+- `ttc_threshold` (float, seconds): brake when `iTTC < ttc_threshold`.
+- `speed_topic` (string): topic name for current longitudinal speed (optional).
+
+### Subscribers
+- `/scan` (`sensor_msgs/LaserScan`): primary Lidar input used to compute `r` and `r_dot` per beam.
+- `/odom` (`nav_msgs/Odometry`) or `/vesc/odom` (optional): provides `Vx` if needed.
+
+### Publishers
+- `/brake_bool` (`std_msgs/Bool`): true when braking is commanded (iTTC below threshold).
+- `/drive` (`ackermann_msgs/AckermannDriveStamped`): command with reduced speed/zero throttle when braking.
+
+Notes:
+- Clamp ranges to `[min_range, max_range]` before computing iTTC.
+- Ignore beams with invalid/NaN/Inf ranges.
+
+---
+
 ## Relationship
 
 From geometry, the radial component of the vehicle velocity along the Lidar beam is:
