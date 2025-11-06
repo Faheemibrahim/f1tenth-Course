@@ -3,7 +3,7 @@
 Welcome to my F1Tenth Labs repository!  
 This repo contains my ROS2-based projects for the **F1Tenth autonomous racing course**.
 
-I’ll be **documenting my progress** through each lab —  
+I’ll be **documenting my progress** through each lab.  
 check out each module to get an **intuitive understanding of the algorithms before you code them yourself**.
 
 ---
