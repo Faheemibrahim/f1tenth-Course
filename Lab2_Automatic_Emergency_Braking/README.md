@@ -45,3 +45,22 @@ Given `r = 10 m`, `Vx = 5 m/s`, and `theta = 180°` (closing):
 
 - `r_dot = 5 * cos(180°) = -5 m/s`
 - `TTC = 10 / 5 = 2 s`
+
+---
+
+## Instantaneous TTC (iTTC)
+
+As discussed in the lecture, the instantaneous TTC is
+
+$$ iTTC = \frac{r}{\{ -\dot{r} \}_+} $$
+
+where the positive-part operator is defined as `\{x\}_+ = max(x, 0)`.
+
+Plain-text equivalent for implementation:
+
+- `iTTC = r / max(-r_dot, 0)`
+- If `-r_dot <= 0` (i.e., `r_dot >= 0`), treat `iTTC` as infinite (no closing).
+
+Implementation notes:
+- Consider a small epsilon in the denominator to avoid division by zero in code.
+- Apply filtering to `r_dot` to reduce noise before computing `iTTC`.
