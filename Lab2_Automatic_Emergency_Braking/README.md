@@ -12,6 +12,10 @@ $$ iTTC=\frac{r}{\lbrace- \dot{r}\rbrace_{+}} $$
 ---
 ## Relationship
 
+<p align="center">
+  <img src="https://github.com/Faheemibrahim/f1tenth-Course/blob/main/Lab2_Automatic_Emergency_Braking/trig.png" alt="Lidar Geometry" width="500"/>
+</p>
+
 From geometry (using Soh/Cah/Toa), the radial component of the vehicle velocity along the Lidar beam is:
 
 `cos(theta) = r_dot / Vx`    
