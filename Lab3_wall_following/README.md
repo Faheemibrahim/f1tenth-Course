@@ -1,59 +1,130 @@
-# Lab 3 – Wall Following Notes
+# Lab 3 – Wall Following with PID
 
-This summarizes the core math and control in `wall_following.py` so you can quickly tune and explain it.
 
-## 1) Formulas
 
-- Angle to wall: `alpha = atan((b − a·cos(theta)) / (a·sin(theta)))`
-- Perpendicular distance: `D_t = b·cos(alpha)`
-- Lookahead projection: `D_t+1 = D_t + l·sin(alpha)`
-- Error (lateral): `e = desired_distance − D_t+1`
-- PID terms and output:
-  - `P = kp · e`
-  - `I = ki · clamp(integral + e·dt, −wind_up, wind_up)`
-  - `D = kd · (e − prev_error) / dt`
-  - `PID = P + I + D`
-- Steering command: `steering_angle = clip(PID, −1, 1) · max_steering_angle`
-- Speed policy:
-  - if `|steering_angle| < 10°` → `speed = 1.5`
-  - else if `|steering_angle| < 20°` → `speed = 1.0`
-  - else → `speed = 0.5`
 
-## 2) Variables
 
-- `a` (`a_distance`): LIDAR range at `a_angle = 60°`
-- `b` (`b_distance`): LIDAR range at `b_angle = 20°`
-- `theta = a_angle − b_angle = 40°` (fixed)
-- `alpha`: vehicle orientation relative to wall normal
-- `D_t`: current perpendicular distance to wall
-- `D_t+1`: projected distance using lookahead `l`
-- `e`: lateral error used by PID
-- `l`: lookahead distance (default `0.1 m`)
-- `desired_distance`: target distance to wall (default `1.0 m`)
-- `kp, ki, kd`: PID gains (defaults `2.5, 0.1, 0.1`)
-- `wind_up`: integral clamp limit (`±1.0`)
-- `dt`: loop timestep (clipped to `[0.005, 0.05] s`; first loop uses `0.004 s`)
-- `max_steering_angle`: `0.4189 rad`
-- `speed`: chosen from steering magnitude via policy above
 
-## 3) Relationships
 
-- Geometry from two rays (`a` at 60°, `b` at 20°) estimates wall orientation (`alpha`) and distance (`D_t`).
-- Lookahead `l` forms a forward-looking error `e = desired − D_t+1` to reduce oscillations.
-- PID maps `e` to steering; output is clipped to `[−1, 1]` then scaled by `max_steering_angle`.
-- Larger turns (|steering|) imply lower speed for stability and safety.
+## Section 2 Overview 
+***This section explains how the PID controller is used for wall following.
+Robots don’t calculate continuously instead, they update their controller at a fixed rate.
+Because of this, we use discrete time (DT), where the PID formula is computed once every control loop, using the latest sensor data.
+We first look at the PID equation in continuous time, then show how it becomes simpler and more practical when converted to discrete time for real robots.***
 
-## Quick Example
+---
 
-Given: `a = 2.0 m` (60°), `b = 1.5 m` (20°), `l = 0.1 m`, `desired = 1.0 m`, `kp=2.5`, `ki=0.1`, `kd=0.1`, `prev_error=0`, `dt=0.01 s`.
+## 1. PID (Continues Time) formula
 
-- `theta = 40°`, `cos40≈0.7660`, `sin40≈0.6428`
-- `alpha ≈ atan((1.5 − 2·0.7660) / (2·0.6428)) ≈ −0.0249 rad`
-- `D_t ≈ 1.5·cos(−0.0249) ≈ 1.4995 m`
-- `D_t+1 ≈ 1.4995 + 0.1·sin(−0.0249) ≈ 1.4970 m`
-- `e ≈ 1.0 − 1.4970 = −0.497`
-- `P ≈ −1.243`, `I ≈ −0.0005`, `D ≈ −4.97` → `PID ≈ −6.21` → clip to `−1`
-- `steering_angle ≈ −0.4189 rad` (code sends `−steering`, so command is `+0.4189 rad`)
-- `|steering| ≈ 24°` → `speed = 0.5 m/s`
+$$ u(t) = K_p e(t) + K_i \int_0^t e(t') dt' + K_d \frac{d}{dt}(e(t)) $$
+
+Where:
+- **u(t)** is the control output.
+- **e(t)** is the error (difference between desired and measured value).
+- **Kp**, **Ki**, **Kd** are the PID gains.
+
+---
+
+## 3. PID (Discrete Time) formula Breakdown
+
+### **dt (Time Step)**
+
+**dt** is the time between each PID update.  
+It comes from the control loop frequency:
+
+$$ dt = \frac{1}{\text{Hz}} $$
+
+For example, if the controller runs at **250 Hz**:
+
+$$ dt = \frac{1}{250} = 0.004\ \text{seconds} \ (4\ \text{ms}) $$
+
+In simple terms:
+
+> **dt tells the PID controller how much time passed since the last update.**
+
+---
+
+### **Kp  (Proportional Term)**
+
+$$ P = K_p \cdot error $$
+
+The proportional term provides an **instant reaction** to the current error. It answers the question:
+
+> *"How far am I from where I should be right now?"*
+
+- A small error → small correction.  
+- A large error → large correction.
+
+In wall following: if the robot is too close or too far from the wall, **Kp directly adjusts the steering angle** to push the robot back toward the target distance.
+
+However:
+- If **Kp is too high**, the robot may oscillate aggressively or overcorrect.  
+- If **Kp is too low**, the robot reacts too slowly and drifts.
+
+---
+
+### **Ki (Integral Term)**
+
+**(I_prev = previous errors accumulated)**
+
+$$ I = I_{prev} + K_i \cdot error \cdot dt $$
+
+The integral term looks at **past errors accumulated over time** and answers:
+
+> *"Have I been consistently off in one direction for a long time?"*
+
+It adds up small errors over time:
+- If the robot stays slightly too far from the wall, Ki will accumulate and eventually push the robot closer.
+- It **eliminates steady-state error**, which Kp alone cannot fix.
+
+However, the danger:
+- If the error persists for too long (e.g., when the steering is already maxed out), the integral grows excessively.
+- This creates **overshoot, oscillation, and instability**.
+- This is known as **integral windup**.
+
+---
+
+### **Kd (Derivative Term)**
+
+$$ D = K_d \cdot \frac{error - (previous.error)}{dt} $$
+
+The derivative term focuses on **the rate of cahange of error over time**. It answers:
+
+> *"Am I approaching the wall too fast?"*
+
+It predicts future error based on recent trend:
+- If the robot approaches the wall quickly, D applies a counter-steering action.
+- If the robot turns away quickly, D softens the correction to avoid jerky movement.
+
+Kd acts like a **damping force**, helping the robot:
+- Stabilize turns  
+- Reduce oscillations  
+- Produce smoother steering  
+
+In short:
+- **Kp** drives the robot toward the correct distance.  
+- **Ki** fixes long-term bias.  
+- **Kd** prevents overshoot and smooths the motion.  
+
+---
+
+## 4. Anti-Windup (Integral Limiting)
+The **integral windup** problem occurs when the integral term accumulates too much error while the robot is already at the limit of its steering capability.
+
+### Example:
+- Robot keeps turning left at its max steering angle.  
+- Error stays large.  
+- Ki continues accumulating.  
+- System becomes unstable.
+
+
+---
+
+
+
+
+
+
+
 
 
