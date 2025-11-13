@@ -44,10 +44,10 @@ class WallFollow(Node):
             self.stop)
 
         
-        # set PID gains (needs tuning)
+        # set PID gains (needs tune as per your need)
         # https://en.wikipedia.org/wiki/Ziegler%E2%80%93Nichols_method (tuning method)
-        self.kp = 1.0
-        self.ki = 0
+        self.kp = 2.5
+        self.ki = 0.1
         self.kd = 0.1
         self.wind_up = 1.0  # anti-windup limit
 
