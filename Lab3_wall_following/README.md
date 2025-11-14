@@ -251,11 +251,11 @@ If steering range is ±`0.4` radians:
 
 Speed is set from the absolute steering angle `abs_sa` (degrees):
 
-- `|abs_sa| < 10°`  -> speed `1.5 m/s`
+- `|abs_sa| < 10°` →  speed `1.5 m/s`
   
-- `10° <= |abs_sa| < 20°` -> speed `1.0 m/s`
+- `10° <= |abs_sa| < 20°` →  speed `1.0 m/s`
   
-- `|abs_sa| >= 20°` -> speed `0.5 m/s`
+- `|abs_sa| >= 20°` →  speed `0.5 m/s`
 
 > ***Why adjust speed?***
 >
