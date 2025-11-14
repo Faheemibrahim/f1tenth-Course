@@ -1,10 +1,9 @@
 # Lab 3 – Wall Following with PID
 
 
-
-
-
-
+<p align="center">
+  <img src="https://github.com/Faheemibrahim/f1tenth-Course/blob/main/Lab3_wall_following/Screenshot%20from%202025-11-14%2003-08-37.png" alt="Lidar Geometry" width="500"/>
+</p>
 
 
 ---
