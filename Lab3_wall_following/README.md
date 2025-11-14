@@ -215,62 +215,54 @@ $$
 
 ### **Clipping the `PID` Output**
 
-Clipping ensures the `PID` output stays within a safe, normalized range:
+Clipping keeps the `PID` command in a safe, normalized range:
 
 $$
 -1 \le \text{PID} \le 1
 $$
 
-******Why clipping?******
-
-- Prevents extreme steering commands when the error suddenly spikes.  
-- Protects the vehicle from making violent, unsafe turns.  
-- Ensures the `PID` output remains compatible with a normalized control pipeline.  
-- Creates a stable and predictable steering response.
+******Why clipping?****** Avoids extreme/unsafe turns, keeps the control pipeline consistent, and stabilizes steering.
 
 ---
 
 ### **Normalization & Scaling to the Maximum Steering Angle**
 
-Once clipped, the `PID` output is normalized, meaning:
+Once clipped, the `PID` output is normalized:
 
-- `-1` represents **maximum left** turn  
-- `0` represents **straight**  
-- `1` represents **maximum right** turn
+- `-1` → **max left**  
+- `0`  → **straight**  
+- `1`  → **max right**
 
-The normalized `PID` value is then mapped to the car’s mechanical steering limits.
-
+Then map the normalized `PID` to the car’s mechanical limits.
 
 > ******What scaling?******
 
-If the car’s mechanical steering range is ±`0.4` radians:
+If steering range is ±`0.4` radians:
 
-- `PID = 1`  → `+0.4 rad` (full right)  
-- `PID = -1` → `-0.4 rad` (full left)  
-- `PID = 0`  → `0 rad` (straight)
+- `PID = 1`  → `+0.4 rad`  
+- `PID = 0`  → `0 rad`  
+- `PID = -1` → `-0.4 rad`
 
-> ******Why scaling?******
-
-- The `PID` controller works in a generic, unitless range.  
-- The car’s steering operates in real units (radians).  
-- Scaling maps the controller output to actual hardware limits.  
-- Ensures consistency between the `PID` controller and the vehicle’s actuator limits.
+> ******Why scaling?****** `PID` is unitless; actuators use radians. Scaling cleanly maps controller output to hardware limits for predictable behavior.
 
 ---
 
 ### **Speed Adjustment Based on Steering Angle**
 
-Speed is determined by the absolute steering angle `abs_sa` (in degrees). Instead of fixed values, use **ranges** to allow smoother policy tuning:
+Speed is set from the absolute steering angle `abs_sa` (degrees):
 
-`|abs_sa| < 10°`  -> speed `1.5 m/s`  
-`10° <= |abs_sa| < 20°` -> speed `1.0 m/s`  
-`|abs_sa| >= 20°` -> speed `0.5 m/s`
+- `|abs_sa| < 10°`  -> speed `1.5 m/s`
+  
+- `10° <= |abs_sa| < 20°` -> speed `1.0 m/s`
+  
+- `|abs_sa| >= 20°` -> speed `0.5 m/s`
 
 > ***Why adjust speed?***
+>
+> - ******High speed + sharp steering****** → instability/drift.  
+> - ******Tighter turns = slower****** → better control and safety.  
+> - ******Simple fixed speeds****** → predictable, easy to tune.
 
-> - High speeds with sharp steering can lead to instability or drifting.  
-> - Lower speeds during tighter turns keep the car controlled and safe.  
-> - Ranges allow **adaptive** tuning (by environment, grip, latency) without changing code.
 
 ---
 
