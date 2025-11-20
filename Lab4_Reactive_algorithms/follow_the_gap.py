@@ -104,12 +104,12 @@ class FollowTheGapNode(Node):
         diff = np.diff(free_int)  # np.diff basically does free_int[i+1] - free_int[i] and gives one less element than the padded 
 
         start_idx = np.where(diff == 1)[0]  # first element in the list 
-        end_idx = np.where(diff == -1)[0]
+        end_idx = np.where(diff == -1)[0]   
 
         size = end_idx - start_idx
         max_gap_idx = np.argmax(size)
 
-        self.best_start = start_idx[max_gap_idx]       # inclusive   
+        self.best_start = start_idx[max_gap_idx]      # inclusive   
         self.best_end   = end_idx[max_gap_idx] - 1    # inclusive 
 
         return self.best_start, self.best_end
@@ -133,7 +133,7 @@ class FollowTheGapNode(Node):
         abs_sa = abs(steering_angle) # (converts negetive values to positive)temporary absolute-value copy for checking how large the turn is
 
         if 0 < abs_sa < ten_deg:
-            speed = 3.0
+            speed = 3.5
         else:
             speed = 1.5
 
@@ -153,3 +153,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+#https://github.com/bluejamis/f1tenth_labs/blob/main/lab4/lab4/gap_follow_node.py  refer to this guys code too its better i think 
